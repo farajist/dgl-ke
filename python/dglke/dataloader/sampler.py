@@ -335,7 +335,7 @@ def ConstructGraph(dataset, args):
     n_entities = dataset.n_entities
 
     coo = sp.sparse.coo_matrix((np.ones(len(src)), (src, dst)), shape=[n_entities, n_entities])
-    g = dgl._deprecate.graph.DGLGraph(coo, readonly=True, multigraph=True, sort_csr=True)
+    g = dgl.DGLGraph(coo, readonly=True, multigraph=True, sort_csr=True)
     g.edata['tid'] = F.tensor(etype_id, F.int64)
     if args.has_edge_importance:
         e_impts = F.tensor(dataset.train[3], F.float32)
