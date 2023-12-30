@@ -57,6 +57,14 @@ class BaseLogsigmoidLoss(BaseLoss):
     def __call__(self, score, label):
         pass
 
+class BaseFocalLoss(BaseLoss):
+    """ MultiFocalLoss
+    """
+    def __init__(self):
+        super(BaseFocalLoss, self).__init__()
+
+    def __call__(self, score, label):
+        pass
 
 class BaseLossGenerator(object):
     """ loss generator class is responsible for calculate loss for positive & negative loss / pairwise loss.

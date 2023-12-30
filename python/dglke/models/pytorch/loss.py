@@ -38,6 +38,14 @@ class LogsigmoidLoss(BaseLogsigmoidLoss):
         return - logsigmoid(label * score)
 
 
+class FocalLoss(BaseFocalLoss):
+    def __init__(self, focal_gamma):
+        super(FocalLoss, self).__init__()
+        self.focal = FocalLoss(focal_gamma)
+
+    def __call__(self, score: th.Tensor, label):
+        return self.focal(score, label)
+    
 class LossGenerator(BaseLossGenerator):
     def __init__(self, args, loss_genre='Logsigmoid', neg_adversarial_sampling=False, adversarial_temperature=1.0,
                  pairwise=False):
@@ -54,6 +62,9 @@ class LossGenerator(BaseLossGenerator):
         elif loss_genre == 'BCE':
             self.neg_label = 0
             self.loss_criterion = BCELoss()
+        elif loss_genre == 'Focal':
+            self.neg_label = 0
+            self.loss_criterion = FocalLoss(args.focal_gamma)
         else:
             raise ValueError('loss genre %s is not support' % loss_genre)
 
@@ -96,3 +107,15 @@ class LossGenerator(BaseLossGenerator):
         log['neg_loss'] = get_scalar(neg_loss)
         log['loss'] = get_scalar(loss)
         return loss, log
+
+
+if __name__ == '__main__':
+    no_of_classes = 5
+    logits = torch.rand(10,no_of_classes).float()
+    labels = torch.randint(0,no_of_classes, size = (10,))
+    beta = 0.9999
+    gamma = 2.0
+    samples_per_cls = [2,3,1,2,2]
+    loss_type = "focal"
+    cb_loss = CB_loss(labels, logits, samples_per_cls, no_of_classes,loss_type, beta, gamma)
+    print(cb_loss)

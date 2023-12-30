@@ -295,3 +295,5 @@ class CommonArgParser(argparse.ArgumentParser):
                           help='The loss function used to train KGEM.')
         self.add_argument('-m', '--margin', type=float, default=1.0,
                           help='hyper-parameter for hinge loss.')
+        self.add_argument('-fg', '--focal_gamma', type=float, default=12.0, 
+                          help='The gamma value in the focal loss function.')
