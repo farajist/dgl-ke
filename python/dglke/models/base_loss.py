@@ -58,10 +58,11 @@ class BaseLogsigmoidLoss(BaseLoss):
         pass
 
 class BaseFocalLoss(BaseLoss):
-    """ MultiFocalLoss
+    """ FocalLoss
     """
-    def __init__(self):
+    def __init__(self, focal_gamma):
         super(BaseFocalLoss, self).__init__()
+        self.focal_gamma = focal_gamma
 
     def __call__(self, score, label):
         pass

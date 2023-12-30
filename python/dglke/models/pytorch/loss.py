@@ -1,6 +1,6 @@
 from ..base_loss import *
 from .tensor_models import *
-from .focal import FocalLoss
+from .focal import sigmoid_focal_loss
 import torch as th
 import torch.nn.functional as functional
 
@@ -41,11 +41,10 @@ class LogsigmoidLoss(BaseLogsigmoidLoss):
 
 class BinaryFocalLoss(BaseFocalLoss):
     def __init__(self, focal_gamma):
-        super(BinaryFocalLoss, self).__init__()
-        self.focal = FocalLoss(focal_gamma)
+        super(BinaryFocalLoss, self).__init__(focal_gamma)
 
     def __call__(self, score: th.Tensor, label):
-        return self.focal(score, th.tensor(label).cuda())
+        return sigmoid_focal_loss(inputs=score, target=label, gamma=self.focal_gamma)
     
 class LossGenerator(BaseLossGenerator):
     def __init__(self, args, loss_genre='Logsigmoid', neg_adversarial_sampling=False, adversarial_temperature=1.0,
@@ -64,7 +63,7 @@ class LossGenerator(BaseLossGenerator):
             self.neg_label = 0
             self.loss_criterion = BCELoss()
         elif loss_genre == 'Focal':
-            self.neg_label = -1
+            self.neg_label = 0
             self.loss_criterion = BinaryFocalLoss(args.focal_gamma)
         else:
             raise ValueError('loss genre %s is not support' % loss_genre)
