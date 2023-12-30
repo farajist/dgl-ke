@@ -418,7 +418,7 @@ class TrainDataset(object):
                            exclude_positive=exclude_positive,
                            return_false_neg=False)
 
-class ChunkNegEdgeSubgraph(dgl._deprecate.graph.DGLGraph):
+class ChunkNegEdgeSubgraph(dgl.DGLGraph):
     """Wrapper for negative graph
 
         Parameters
