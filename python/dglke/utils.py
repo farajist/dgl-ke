@@ -24,6 +24,13 @@ import argparse
 import json
 import numpy as np
 
+
+to_device = lambda x, gpu_id: x.to(th.device('cpu')) if gpu_id == -1 else x.to(th.device('cuda:%d' % gpu_id))
+none = lambda x: x
+norm = lambda x, p: x.norm(p=p) ** p
+get_scalar = lambda x: x.detach().item()
+reshape = lambda arr, x, y: arr.view(x, y)
+
 def get_compatible_batch_size(batch_size, neg_sample_size):
     if neg_sample_size < batch_size and batch_size % neg_sample_size != 0:
         old_batch_size = batch_size
@@ -195,6 +202,52 @@ def load_entity_data(file=None):
     entity = np.asarray(entity)
     return entity
 
+def prepare_save_path(args):
+    if not os.path.exists(args.save_path):
+        os.mkdir(args.save_path)
+
+    folder = '{}_{}_'.format(args.model_name, args.dataset)
+    n = len([x for x in os.listdir(args.save_path) if x.startswith(folder)])
+    folder += str(n)
+    args.save_path = os.path.join(args.save_path, folder)
+
+    if not os.path.exists(args.save_path):
+        os.makedirs(args.save_path)
+
+
+def set_seed(args):
+    np.random.seed(args.seed)
+    th.manual_seed(args.seed)
+
+def evaluate_best_result(model_name, dataset, save_path, threshold=3):
+    file_pattern = '{}/{}_{}_*/result.txt'.format(save_path, model_name, dataset)
+    files = glob.glob(file_pattern)
+    best_result = None
+    best_dir = None
+    for file in files:
+        dir = file.split('/')[-2]
+        with open(file, 'r') as f:
+            result = json.load(f)
+        if best_result is None:
+            best_result = result
+            best_dir = dir
+            continue
+        else:
+            cnt = 0
+            for k in result.keys():
+                if k == 'MR':
+                    if result[k] <= best_result[k]:
+                        cnt += 1
+                else:
+                    if result[k] >= best_result[k]:
+                        cnt += 1
+            if cnt >= threshold:
+                best_result = result
+                best_dir = dir
+    print(f'''{model_name} training on {dataset} best result is in folder {best_dir}\n'
+          best result:\n''')
+    for k, v in best_result.items():
+        print(f'{k}: {v}')
 
 class CommonArgParser(argparse.ArgumentParser):
     def __init__(self):
@@ -295,3 +348,42 @@ class CommonArgParser(argparse.ArgumentParser):
                           help='The loss function used to train KGEM.')
         self.add_argument('-m', '--margin', type=float, default=1.0,
                           help='hyper-parameter for hinge loss.')
+         # args for ConvE
+        self.add_argument('--tensor_height', type=int, default=10,
+                          help='Tensor height for ConvE. Note hidden_dim must be divisible by it')
+        self.add_argument('--dropout_ratio', type=float, nargs='+', default=0,
+                          help='Dropout ratio for input, conv, linear respectively. If 0 is specified, ConvE will not use dropout for that layer')
+        self.add_argument('--batch_norm', '-bn', type=bool, default=True,
+                          help='Whether use batch normalization in ConvE or not')
+        self.add_argument('--label_smooth', type=float, default=.0,
+                          help='use label smoothing for training.')
+        # args for reproducibility
+        self.add_argument('--seed', type=int, default=0,
+                          help='Random seed for reproducibility')
+        self.add_argument('--num_node', type=int, default=1,
+                          help='Number of node used for distributed training')
+        # this is used for distributed training. not implemented yet
+        self.add_argument('--node_rank', type=int, default=0,
+                          help='The rank of node, ranged from [0, num_node - 1]')
+        # self.add_argument('--eval_chunk', type=int, default=8,
+        #                   help='Number of chunk to corrupt for the whole graph to pervent OOM for evaluation. The smaller the more RAM it consumed.')
+        self.add_argument('--mode', type=str, default='fit',
+                          choices=['fit', 'eval'],
+                          help='Whether to train the model or to evaluate.')
+        # TODO: lingfei - use function to substitute brute force sampling
+        self.add_argument('--init_strat', type=str, default='uniform',
+                          choices=['uniform', 'xavier', 'constant'],
+                          help='Initial strategy for embeddings.')
+        self.add_argument('--num_workers', type=int, default=8,
+                          help='Number of process to fetch data for training/validation dataset.')
+
+        # hyper-parameter for hyperbolic embeddings
+        self.add_argument('--init_scale', type=float, default=0.001,
+                          help='Initialization scale for entity embedding, relation embedding, curvature, attention in hyperbolic embeddings')
+        self.add_argument('--optimizer', type=str, default='Adagrad',
+                          choices=['Adagrad', 'Adam'],
+                          help='Optimizer for kg embeddings')
+        self.add_argument('--no_save_log', action='store_false', dest='save_log',
+                          help='If specified, dglke will not save log and result file to save path.')
+        self.add_argument('--tqdm', action='store_true', dest='tqdm',
+                          help='Use tqdm to visualize training and evaluation process. Note this might drag speed of process 0 for multi-GPU training.')
