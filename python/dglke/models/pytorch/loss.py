@@ -40,7 +40,7 @@ class LogsigmoidLoss(BaseLogsigmoidLoss):
 
 class LossGenerator(BaseLossGenerator):
     def __init__(self, args, loss_genre='Logsigmoid', neg_adversarial_sampling=False, adversarial_temperature=1.0,
-                 pairwise=False):
+                 pairwise=False, label_smooth=.0):
         super(LossGenerator, self).__init__(neg_adversarial_sampling, adversarial_temperature, pairwise)
         if loss_genre == 'Hinge':
             self.neg_label = -1

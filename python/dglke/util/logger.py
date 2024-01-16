@@ -18,5 +18,3 @@ class Logger(object):
     def save_result(cls, result: dict):
         with open(cls.result_path, 'w') as f:
             json.dump(result, f, indent=4)
-
-

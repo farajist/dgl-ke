@@ -30,7 +30,6 @@ import os
 from abc import abstractmethod, ABCMeta, ABC
 import numpy as np
 import dgl
-from python.dglke.util import logger
 import torch as th
 
 from .pytorch.tensor_models import logsigmoid
@@ -52,11 +51,11 @@ from .pytorch.tensor_models import extended_jaccard_dist
 from .pytorch.tensor_models import floor_divide
 from .pytorch.regularizer import Regularizer
 from .pytorch.loss import LossGenerator
-
+from .pytorch.ke_optimizer import Adam, Adagrad
 from dglke.util import thread_wrapped_func, Logger
 from dglke.utils import get_compatible_batch_size, prepare_save_path, get_scalar, to_device
 
-from dglke.dataloader import EvalDataset, TrainDataset, SequentialTotalSampler, PartitionChunkDataset
+from dglke.dataloader import ConstructGraph, EvalDataset, TrainDataset, SequentialTotalSampler, PartitionChunkDataset
 from dglke.dataloader import get_dataset
 
 import time
@@ -1144,8 +1143,8 @@ class GEModel(ABC, BasicGEModel):
         if args.save_log:
             log_file = 'log.txt'
             result_file = 'result.txt'
-            logger.log_path = os.path.join(args.save_path, log_file)
-            logger.result_path = os.path.join(args.save_path, result_file)
+            Logger.log_path = os.path.join(args.save_path, log_file)
+            Logger.result_path = os.path.join(args.save_path, result_file)
         init_time_start = time.time()
         # load dataset and samplers
         dataset = get_dataset(args.data_path,
@@ -1223,9 +1222,9 @@ class GEModel(ABC, BasicGEModel):
         if args.save_log:
             log_file = 'log.txt'
             result_file = 'result.txt'
-            logger.log_path = os.path.join(args.save_path, log_file)
-            logger.result_path = os.path.join(args.save_path, result_file)
-            print = logger.print
+            Logger.log_path = os.path.join(args.save_path, log_file)
+            Logger.result_path = os.path.join(args.save_path, result_file)
+            print = Logger.print
         init_time_start = time.time()
         # load dataset and samplers
         dataset = get_dataset(args.data_path,
@@ -1253,8 +1252,10 @@ class GEModel(ABC, BasicGEModel):
         if args.neg_deg_sample_eval:
             assert not args.eval_filter, "if negative sampling based on degree, we can't filter positive edges."
 
+
         # partition training dataset here
-        train_dataset = TrainDataset(dataset, args, ranks=args.num_proc, has_importance=args.has_edge_importance)
+        g = ConstructGraph(dataset, args)
+        train_dataset = TrainDataset(g, dataset, args, ranks=args.num_proc, has_importance=args.has_edge_importance)
         args.strict_rel_part = args.mix_cpu_gpu and (train_dataset.cross_part is False)
         args.soft_rel_part = args.mix_cpu_gpu and args.rel_part and train_dataset.cross_part is True
 
@@ -1271,7 +1272,7 @@ class GEModel(ABC, BasicGEModel):
                 assert dataset.valid is not None, 'validation set is not provided'
             if args.test:
                 assert dataset.test is not None, 'test set is not provided'
-            eval_dataset = EvalDataset(dataset, args)
+            eval_dataset = EvalDataset(g, dataset, args)
             self.attach_graph(eval_dataset.g)
 
         if self.dist_train:
@@ -1642,7 +1643,7 @@ class GEModel(ABC, BasicGEModel):
             else:
                 for k, v in metrics.items():
                     print('[{}]{} average {}: {}'.format(rank, mode, k, v))
-                logger.save_result(metrics)
+                Logger.save_result(metrics)
 
         if mode is not 'valid':
             self.cleanup()

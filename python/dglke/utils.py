@@ -23,6 +23,7 @@ import csv
 import argparse
 import json
 import numpy as np
+import torch as th
 
 
 to_device = lambda x, gpu_id: x.to(th.device('cpu')) if gpu_id == -1 else x.to(th.device('cuda:%d' % gpu_id))
@@ -256,7 +257,7 @@ class CommonArgParser(argparse.ArgumentParser):
         self.add_argument('--model_name', default='TransE',
                           choices=['TransE', 'TransE_l1', 'TransE_l2', 'TransR',
                                    'RESCAL', 'DistMult', 'ComplEx', 'RotatE',
-                                   'SimplE'],
+                                   'SimplE','ConvE'],
                           help='The models provided by DGL-KE.')
         self.add_argument('--data_path', type=str, default='data',
                           help='The path of the directory where DGL-KE loads knowledge graph data.')
