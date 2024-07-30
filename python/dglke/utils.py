@@ -291,9 +291,9 @@ class CommonArgParser(argparse.ArgumentParser):
                           help='Indicate whether to use pairwise loss function. '
                                'It compares the scores of a positive triple and a negative triple')
         self.add_argument('--loss_genre', default='Logsigmoid',
-                          choices=['Hinge', 'Logistic', 'Logsigmoid', 'BCE', 'Focal'],
+                          choices=['Hinge', 'Logistic', 'Logsigmoid', 'BCE', 'Focal', 'AsymmetricUnifiedFocalLoss'],
                           help='The loss function used to train KGEM.')
         self.add_argument('-m', '--margin', type=float, default=1.0,
                           help='hyper-parameter for hinge loss.')
-        self.add_argument('-fg', '--focal_gamma', type=float, default=12.0, 
+        self.add_argument('-fg', '--focal_gamma', type=float, default=0.75, 
                           help='The gamma value in the focal loss function.')

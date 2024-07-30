@@ -1,6 +1,7 @@
 from ..base_loss import *
 from .tensor_models import *
 from .focal import sigmoid_focal_loss
+from .asymmetric_unified_focal import asymmetric_unified_focal_loss
 import torch as th
 import torch.nn.functional as functional
 
@@ -45,6 +46,13 @@ class BinaryFocalLoss(BaseFocalLoss):
 
     def __call__(self, score: th.Tensor, label):
         return sigmoid_focal_loss(inputs=score, target=label, gamma=self.focal_gamma)
+
+class AsymmetricUnifiedFocalLoss(BaseFocalLoss):
+    def __init__(self, focal_gamma):
+        super(AsymmetricUnifiedFocalLoss, self).__init__(focal_gamma)
+
+    def __call__(self, score: th.Tensor, label):
+        return asymmetric_unified_focal_loss(inputs=score, target=label, gamma=self.focal_gamma)
     
 class LossGenerator(BaseLossGenerator):
     def __init__(self, args, loss_genre='Logsigmoid', neg_adversarial_sampling=False, adversarial_temperature=1.0,
@@ -65,6 +73,9 @@ class LossGenerator(BaseLossGenerator):
         elif loss_genre == 'Focal':
             self.neg_label = 0
             self.loss_criterion = BinaryFocalLoss(args.focal_gamma)
+        elif loss_genre == 'AsymmetricUnifiedFocal':
+            self.neg_label = 0
+            self.loss_criterion = AsymmetricUnifiedFocalLoss(args.focal_gamma)
         else:
             raise ValueError('loss genre %s is not support' % loss_genre)
 
